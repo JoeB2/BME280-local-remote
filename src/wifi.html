@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="file" content="wifi.html">
+    <meta name="author" content="Joe Belson 20210822">
+    <meta name="what" content="Set wifi configuration">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set WiFi Configuration</title>
+    <style>
+      #blink {
+          font-size: 15px;
+          font-weight: bold;
+          color: #be2d2d;
+          transition: 0.5s;
+      }
+    </style>
+  </head>
+  <body style="text-align: left;" onload="f_onload()">
+    <input id="bt_help" type="submit" value="Help" style="font-size: 14px;line-height: 1.5;" onclick="f_help()">
+    <h2>Dual BME280</h2>
+    <p>
+      <hr>
+      <table class="calibrate">
+        <caption style="font-weight: bolder;">Set WiFi Configuration</caption>
+         <thead>
+          <tr>
+            <th>SSID</th>
+            <th>PWD</th>
+          </tr>
+         </thead>
+         <tbody>
+          <tr>
+              <td><input type="text" id="ssid" name="cred" onchange="f_update()" placeholder="WiFi SSID"/></td>
+              <td><input type="text" id="pwd"  name="cred" onchange="f_update()" placeholder="WiFi PWD"/></td>
+              <td><input type="submit" value="Submit"  id="submit"   onclick="f_submit()"  name="dhcp"></td>
+              <td><input type="submit" value="Refresh" id ="refresh" onclick="f_refresh()" name="dhcp"></td>
+              <td><input type="submit" value="Restart" id ="restart" onclick="f_restart()" name="dhcp"></td>
+          </tr>
+          </tbody>
+        </table>
+        <br>
+        <table class="calibrate">
+          <label for="isDHCP">DHCP:</label><input type="checkbox" id="isDHCP" onclick="f_dhcp(checked)" onchange="f_update()">
+          <a id="blink"></a>
+          <tbody>
+          <tr>
+            <td>
+               <input type="text" id="ip" name="dhcp"
+                style="width: 7rem;" onchange="f_update()" placeholder="Fixed IP"
+                minlength="7" maxlength="15" size="15"
+                required pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
+            </td>
+            <td>
+               <input type="text" id="gw" name="dhcp"
+                style="width: 7rem;" onchange="f_update()" placeholder="Network Gateway"
+                minlength="7" maxlength="15" size="15"
+                required pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
+            </td>
+            <td>
+              <input type="text" id="mask" name="dhcp"
+                style="width: 7rem;" onchange="f_update()" placeholder="Network Mask"
+                minlength="7" maxlength="15" size="15"
+                required pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
+            </td>
+            <td>
+              <input type="submit" name="dhcp" id="submit2"  value="Submit" onclick="f_submit()">
+              <input type="submit" name="dhcp" id="refresh2" value="Refresh" onclick="f_refresh()">
+              <input type="submit" name="dhcp" id="restart2" value="Restart" onclick="f_restart()">
+            </td>
+          </tr>
+          </tbody>
+        </table>
+        <id id="help" style="visibility:collapse;text-align: left;"><hr>
+            1) Click Submit to send new WiFi credentials
+        <br>2) Click Refresh to reload the web page - discard all changes
+        <br>3) Click Reboot to start the device
+        <hr>
+        <p id="message" style="text-align: left; visibility: collapse;">Message Area</p>
+      </p>
+    </body>
+    <script language = "javascript" type = "text/javascript">
+  
+        let webSock       = new WebSocket('ws://'+window.location.hostname+':80');
+        webSock.onopen = function(){ 
+            let json = {src:"wifi",what:"refresh"};
+            webSock.send(JSON.stringify(json));
+        };
+        webSock.onmessage = function(evt){f_webSockOnMessage(evt);}
+        webSock.onerror   = function(evt){f_webSockOnError(evt);}
+
+        var j = {
+          src:    "",
+          what:   "",
+          ip:     "",
+          gw:     "",
+          mask:   "",
+          isDHCP: "",
+          ssid:   "",
+          pwd:    ""
+        };
+        let updates = false;
+        function f_webSockOnMessage(evt){
+          if(updates==true)return;
+          if(typeof evt.data === "string"){
+            let j=JSON.parse(evt.data);
+            if(j.src != "wifi")return;
+            document.getElementById("message").innerHTML=JSON.stringify(j);
+            for(let key in j){
+              let e = document.getElementById(key);
+              switch(key){
+                case "src":continue;
+                case "what":continue;
+                case "updated":continue;
+                case "isDHCP":e.checked=j[key];continue;
+                default:
+                  console.log(key+" :",j[key]);
+                  e.value=j[key];continue;
+              }
+            }
+          }
+        }
+        function f_webSockOnError(evt){}
+        function f_submit(){
+          for(var key in j){
+            e=document.getElementById(key);
+            switch(key){
+              case "src":continue;
+              case "what":continue;
+              case "updated":continue;
+              case "isDHCP":
+                j[key]=e.checked?"1":"0"; continue;
+              default:
+                j[key]=e.value;
+          }
+          }
+          j.src="wifi";j.what="submit";
+          console.log(JSON.stringify(j));
+          updates = false;
+          webSock.send(JSON.stringify(j));
+        }
+        function f_refresh(){
+          const msg='{"src":"wifi","what":"refresh"}';
+          console.log(msg);
+          updates = false;
+          webSock.send(msg);
+        }
+        function f_dhcp(checked){
+          const n=document.getElementsByName("dhcp");
+          if(checked){
+            for(var i=0;i<n.length;i++)n[i].setAttribute("hidden", "hidden");
+            document.getElementById("submit").removeAttribute("hidden");
+            document.getElementById("refresh").removeAttribute("hidden");
+            document.getElementById("restart").removeAttribute("hidden");
+          }else{
+            for(var i=0;i<n.length;i++)n[i].removeAttribute("hidden");
+            document.getElementById("submit").setAttribute("hidden", "hidden");
+            document.getElementById("refresh").setAttribute("hidden", "hidden");
+            document.getElementById("restart").setAttribute("hidden", "hidden");
+          }
+          updates=true;
+        }
+        function f_update(){
+          updates = true;
+          var blink = document.getElementById('blink');
+          blink.innerHTML="Finish Updating then Click Submit or Refresh";
+            setInterval(function() {
+                blink.style.opacity =
+                 (blink.style.opacity == 0 ? 1 : 0);
+                }, 1000);
+        }
+        function f_help(){
+          nxt=document.getElementById("help").style.visibility=="collapse"?"initial":"collapse";
+          document.getElementById("bt_help").value=nxt=="collapse"?"Help":"un-Help";
+          rray=["help","message"];
+          rray.forEach(function(val){document.getElementById(val).style.visibility=nxt;});
+        }
+        function f_onload(){
+          console.log("F_ONLOAD()");
+          document.getElementById("submit").setAttribute("hidden","hidden");
+          document.getElementById("refresh").setAttribute("hidden","hidden");
+          document.getElementById("restart").setAttribute("hidden","hidden");
+          document.getElementById("isDHCP").checked=false;
+        }
+        function f_restart(){webSock.send("{\"src\":\"wifi\",\"what\":\"reboot\"}");}
+     </script>
+  </html>
