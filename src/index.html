@@ -409,6 +409,8 @@ function f_webSockOnMessage(evt){
         var strTare = '{"src":"index","what":"tare"}';
         document.getElementById("json2").innerHTML=strTare;
         webSock.send(strTare);
+        var strTare = '{"src":"index","what":"refresh"}';
+        webSock.send(strTare);
     }
   </script>
 </html>

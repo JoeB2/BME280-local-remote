@@ -1,5 +1,7 @@
 # BME280-remote-local
 
+NOTE:   .pio/libdeps/AsyncElegantOTA/AsyncElegantOTA.h contains an #error directive: comment this line in order to compile the project
+
   Summary:
       This esp8266 firmware is intenmded to provide support for two BME280 sensors.  One local and one remote.
       This is the source code for the LOCAL.
